@@ -9,19 +9,29 @@ OS="$(uname)"
 msg() { echo -e "\n→ $1"; }
 err() { echo "ERROR: $1" >&2; exit 1; }
 
+# Use sudo only when not already root
+if [[ "$(id -u)" -eq 0 ]]; then
+    SUDO=""
+else
+    SUDO="sudo"
+fi
+
 backup_file() {
     local file="$1"
     if [[ -f "$file" ]]; then
-        cp "$file" "${file}.backup-$(date +%F)}" &> /dev/null
+        cp "$file" "${file}.backup-$(date +%F)" &> /dev/null
         msg "Backup created: ${file}.backup-$(date +%F)"
     fi
 }
 
 copy_to_root() {
     if [[ "$OS" == "Linux" ]]; then
-        sudo cp -r ~/.zsh /root/
-        sudo cp ~/.zshrc /root/ 2>/dev/null || true
-        sudo cp ~/.p10k.zsh /root/ 2>/dev/null || true
+        $SUDO cp -r ~/.zsh /root/
+        $SUDO cp ~/.zshrc /root/ 2>/dev/null || true
+        $SUDO cp ~/.p10k.zsh /root/ 2>/dev/null || true
+        $SUDO cp -r ~/.tmux /root/ 2>/dev/null || true
+        $SUDO ln -s -f /root/.tmux/.tmux.conf /root/.tmux.conf 2>/dev/null || true
+        $SUDO cp ~/.tmux.conf.local /root/ 2>/dev/null || true
     fi
 }
 
@@ -63,8 +73,8 @@ install_clt_macos() {
 #===========================================================
 if [[ "$OS" == "Linux" ]]; then
     msg "Installing zsh, bat, git, curl"
-    sudo apt update &> /dev/null
-    sudo apt install -y zsh bat git curl &> /dev/null
+    $SUDO apt update &> /dev/null
+    $SUDO apt install -y zsh bat git curl tmux &> /dev/null
     export PATH="/usr/local/bin:$PATH"
     hash -r
 fi
@@ -80,8 +90,8 @@ msg "Setting ZSH as default shell"
 if [[ "$OS" == "Darwin" ]]; then
     chsh -s /bin/zsh &> /dev/null
 else
-    sudo chsh -s /usr/bin/zsh "$(whoami)" &> /dev/null
-    sudo chsh -s /usr/bin/zsh root &> /dev/null
+    $SUDO chsh -s /usr/bin/zsh "$(whoami)" &> /dev/null
+    $SUDO chsh -s /usr/bin/zsh root &> /dev/null
 fi
 
 #===========================================================
@@ -89,7 +99,7 @@ fi
 #===========================================================
 backup_file ~/.zshrc
 msg "Downloading new .zshrc"
-curl -fsSL -o ~/.zshrc https://raw.githubusercontent.com/gustavohellwig/gh-zsh/main/.zshrc
+curl -fsSL -o ~/.zshrc https://raw.githubusercontent.com/donny-son/instant-zsh/donny-son/.zshrc
 
 #===========================================================
 # Install Theme
@@ -97,7 +107,7 @@ curl -fsSL -o ~/.zshrc https://raw.githubusercontent.com/gustavohellwig/gh-zsh/m
 msg "Installing Powerlevel10k theme"
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.zsh/powerlevel10k &> /dev/null
 
-curl -fsSL -o ~/.p10k.zsh https://raw.githubusercontent.com/gustavohellwig/gh-zsh/main/.p10k.zsh
+curl -fsSL -o ~/.p10k.zsh https://raw.githubusercontent.com/donny-son/instant-zsh/donny-son/.p10k.zsh
 
 #===========================================================
 # Install Plugins
@@ -111,19 +121,15 @@ curl -fsSL -o ~/.zsh/history.zsh https://raw.githubusercontent.com/robbyrussell/
 curl -fsSL -o ~/.zsh/key-bindings.zsh https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/lib/key-bindings.zsh
 
 #===========================================================
-# Update .zshrc sources
+# Install oh-my-tmux
 #===========================================================
-cat << 'EOF' >> ~/.zshrc
+msg "Installing oh-my-tmux"
+git clone --single-branch https://github.com/gpakosz/.tmux.git ~/.tmux &> /dev/null
+ln -s -f ~/.tmux/.tmux.conf ~/.tmux.conf
 
-# Custom additions
-source $HOME/.zsh/powerlevel10k/powerlevel10k.zsh-theme
-source $HOME/.zsh/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
-source $HOME/.zsh/completion.zsh
-source $HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
-source $HOME/.zsh/history.zsh
-source $HOME/.zsh/key-bindings.zsh
-
-EOF
+backup_file ~/.tmux.conf.local
+msg "Downloading .tmux.conf.local"
+curl -fsSL -o ~/.tmux.conf.local https://raw.githubusercontent.com/donny-son/instant-zsh/donny-son/.tmux.conf.local
 
 #===========================================================
 # Copy to root (Linux only)

@@ -66,6 +66,29 @@ export LC_ALL="C.UTF-8"
 export LC_CTYPE="C.UTF-8"
 export LC_MESSAGES="C.UTF-8"
 
+# Tmux: auto-start / auto-attach
+if command -v tmux &>/dev/null \
+   && [[ -z "$TMUX" ]] \
+   && [[ -z "$VSCODE_INJECTION" ]] \
+   && [[ "$TERM_PROGRAM" != "vscode" ]] \
+   && [[ -n "$PS1" ]] \
+   && [[ $- == *i* ]]; then
+    if tmux has-session -t main 2>/dev/null; then
+        exec tmux attach-session -t main
+    else
+        exec tmux new-session -s main
+    fi
+fi
+
+# Tmux: rename window to current directory
+if [[ -n "$TMUX" ]]; then
+    _tmux_rename_window_precmd() {
+        tmux rename-window "$(basename "$PWD")"
+    }
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd _tmux_rename_window_precmd
+fi
+
 # Extras
 source $HOME/.zsh/powerlevel10k/powerlevel10k.zsh-theme
 source $HOME/.zsh/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
